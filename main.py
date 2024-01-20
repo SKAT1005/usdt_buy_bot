@@ -11,7 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'USDT_Buy_Bot.settings')
 django.setup()
 from bot.models import Users, Card, AdminMessage
 
-bot = telebot.TeleBot('6544933471:AAGSYBK7nmuxWL8f42tpxHXV8z-lfhF2p5g')
+bot = telebot.TeleBot('')
 
 
 def delite_history(user):
