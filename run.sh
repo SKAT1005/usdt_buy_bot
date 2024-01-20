@@ -8,6 +8,7 @@ if [ "$RUN_ADMIN" == "true" ]; then
     python manage.py runserver 0.0.0.0:8000
 else
     # Run bot
-    sleep 5
+    python manage.py makemigrations bot
+    python manage.py migrate
     python main.py
 fi
