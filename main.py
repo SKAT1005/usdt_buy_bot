@@ -206,7 +206,6 @@ def start(message):
         user.save()
     except Exception:
         pass
-    bot.delete_message(chat_id=chat_id, message_id=message.id)
     check_user(chat_id, username)
 
 @bot.message_handler(commands=['balance'])
