@@ -13,7 +13,6 @@ from bot.models import Users, Card, AdminMessage
 
 bot = telebot.TeleBot(os.environ["BOT_API"])
 
-
 def delite_history(user):
     messages_id = user.chat_history[:-1].split(',')
     for i in messages_id:
@@ -57,24 +56,29 @@ def output_step_two(chat_id, user, dollars, error=False):
 
 
 def output_step_one(chat_id, user, error=False):
-    bot.last_update_id
     balance = str(user.balance).replace('.', ',')
-    if error == 'more':
-        text = f'Вы ввели больше, чем есть на вашем счете\. Максимум для вывода {balance} долларов'
-    elif error == 'invalid':
-        text = f'Неправильный формат\. Используйте точку как разделитель, не используйте пробелы\. Введите повторно'
-    else:
-        text = '🧮 Введите количество долларов, которые вы хотите вывести\. \n' \
-               '🏼 _Для разделения_ между целым и частью используйте точку "\.", а не запятую ","\.'
     markup = types.InlineKeyboardMarkup()
     menu = types.InlineKeyboardButton('Главное меню', callback_data='menu')
-    output_all = types.InlineKeyboardButton('📤 Вывести все', callback_data='output_all')
-    markup.add(output_all)
     markup.add(menu)
-    msg = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup, parse_mode='MarkdownV2')
-    user.chat_history += f'{msg.id},'
-    user.method = 'dollars_output'
-    user.save()
+    if user.balance > 0:
+        if error == 'more':
+            text = f'Вы ввели больше, чем есть на вашем счете\. Максимум для вывода {balance} долларов'
+        elif error == 'invalid':
+            text = f'Неправильный формат\. Используйте точку как разделитель, не используйте пробелы\. Введите повторно'
+        else:
+            text = '🧮 Введите количество долларов, которые вы хотите вывести\. \n' \
+                   '🏼 _Для разделения_ между целым и частью используйте точку "\.", а не запятую ","\.'
+        output_all = types.InlineKeyboardButton('📤 Вывести все', callback_data='output_all')
+        markup.add(output_all)
+        msg = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup, parse_mode='MarkdownV2')
+        user.chat_history += f'{msg.id},'
+        user.method = 'dollars_output'
+        user.save()
+    else:
+        input_balance = types.InlineKeyboardButton('Купить доллары', callback_data='buy')
+        text = 'На вашем счету к сожалению нет долларов для вывода. Пополнить их можете, нажав на кнопку ниже'
+        markup.add(input_balance)
+        bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
 
 
 def menu_first(chat_id):
@@ -104,6 +108,7 @@ def menu_two(chat_id, username):
            f'ℹ️ Курс за 1 доллар на сегодня: {get_course()} ₽' \
            f'\n\n🟢 Покупаем?'
     markup = button()
+    user = Users.objects.get(tg_id=chat_id)
     output = types.InlineKeyboardButton('📤Вывести', callback_data='output')
     markup.add(output)
     bot.send_message(chat_id, text, reply_markup=markup)
@@ -112,8 +117,11 @@ def menu_two(chat_id, username):
 def send_message_to_user(chat_id):
     text = '⏳ Ожидаем подтверждение продавца.\n' \
            'Обычно занимает до 4 минут'
+    markup = types.InlineKeyboardMarkup()
+    supprot = types.InlineKeyboardButton('Техническая поддержка', url='https://t.me/easycryptofounders')
+    markup.add(supprot)
     user = Users.objects.get(tg_id=chat_id)
-    msg = bot.send_message(chat_id=chat_id, text=text)
+    msg = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
     user.chat_history += f'{msg.id},'
     user.save()
 
@@ -122,10 +130,10 @@ def buy_step_three(chat_id, amount, dollars):
     card = random.choice(Card.objects.all())
     str_amount = str(amount).replace('.', ',')
     link = 'https://telegra.ph/Kak-EasyCrypto-obespechivaet-bezopasnost-vashej-sdelki-01-15'
-    text = f'ℹ Оплатите {str_amount} ₽\n' \
-           f'💳 Номер карты для оплаты:` {card.number}` \n' \
-           f'🏦 Банк {card.bank}\n' \
-           f'👤 Получатель {card.owner}\n' \
+    text = f'ℹ Оплатите {str_amount} ₽\n\n' \
+           f'💳 Номер карты для оплаты:` {card.number}` \n\n' \
+           f'🏦 Банк {card.bank}\n\n' \
+           f'👤 Получатель {card.owner}\n\n' \
            f'🔐 Как мы гарантируем безопасность ваших средств? [Узнайте за 3 минуты]({link})'
     markup = types.InlineKeyboardMarkup()
     supprot = types.InlineKeyboardButton('Поддержка', url='https://t.me/easycryptofounders')
@@ -201,7 +209,11 @@ def start(message):
     bot.delete_message(chat_id=chat_id, message_id=message.id)
     check_user(chat_id, username)
 
-
+@bot.message_handler(commands=['balance'])
+def balance_button(message):
+    chat_id = message.chat.id
+    user = Users.objects.get(tg_id=chat_id)
+    balance(chat_id, user)
 @bot.message_handler(content_types='text')
 def input(message):
     chat_id = message.chat.id
