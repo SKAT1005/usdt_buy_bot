@@ -6,14 +6,28 @@ import django
 import requests
 import telebot
 from telebot import types
+from amplitude import Amplitude, BaseEvent
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'USDT_Buy_Bot.settings')
 django.setup()
 from bot.models import Users, Card, AdminMessage
 
-bot = telebot.TeleBot('')
-
-
+bot = telebot.TeleBot('6544933471:AAGSYBK7nmuxWL8f42tpxHXV8z-lfhF2p5g')
+amplitude = Amplitude("e62466ab5c041effd0e32560107372a2")
+def amplitude_add(from_user, acttion, user_id=False):
+    if not user_id:
+        user_id = from_user.id
+    amplitude.track(
+        BaseEvent(
+            event_type=acttion,
+            user_id=f"{user_id}",
+            device_id=f"{user_id}",
+            event_properties={
+                "username": from_user.username,
+                "first_name": from_user.first_name,
+            }
+        )
+    )
 def delite_history(user):
     messages_id = user.chat_history[:-1].split(',')
     for i in messages_id:
@@ -199,6 +213,7 @@ def check_user(chat_id, username=''):
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    amplitude_add(message.from_user, 'start')
     username = message.from_user.first_name
     chat_id = message.chat.id
     try:
@@ -212,6 +227,7 @@ def start(message):
 
 @bot.message_handler(commands=['balance'])
 def balance_button(message):
+    amplitude_add(message.from_user, 'balance')
     chat_id = message.chat.id
     user = Users.objects.get(tg_id=chat_id)
     balance(chat_id, user)
@@ -354,6 +370,7 @@ def send_output_to_admin(chat_id, dollars, adress):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
+    print(call)
     username = call.from_user.first_name
     message_id = call.message.id
     chat_id = call.message.chat.id
@@ -368,9 +385,11 @@ def callback(call):
             check_user(chat_id, username)
 
         elif data == 'balance':
+            amplitude_add(call.from_user, 'balance')
             balance(chat_id, user)
 
         elif data == 'buy':
+            amplitude_add(call.from_user, 'buy_usd')
             buy_step_one(chat_id=chat_id)
         elif data.split('|')[0] == 'buy_dollar':
             dollars = float(data.split('|')[1])
@@ -388,17 +407,20 @@ def callback(call):
         elif data.split('|')[0] == 'cansel':
             user_chat_id = data.split('|')[1]
             dollars = float(data.split('|')[2])
+            amplitude_add(call.from_user, f'Cansel replenishment balance {dollars}$', user_chat_id)
             amount = float(data.split('|')[3])
             unique_number = data.split('|')[4]
             approve_or_cansel_input(chat_id=user_chat_id, dollars=dollars, amount=amount, unique_number=unique_number,
                                     approved=False)
         elif data == 'output':
+            amplitude_add(call.from_user, f'Output balance')
             output_step_one(chat_id=chat_id, user=user)
         elif data == 'output_all':
             output_step_two(chat_id=chat_id, user=user, dollars=user.balance)
         elif data.split('|')[0] == 'approve':
             user_chat_id = data.split('|')[1]
             dollars = float(data.split('|')[2])
+            amplitude_add(call.from_user, f'Approve replenishment balance {dollars}$', user_chat_id)
             amount = float(data.split('|')[3])
             unique_number = data.split('|')[4]
             approve_or_cansel_input(chat_id=user_chat_id, dollars=dollars, amount=amount, unique_number=unique_number)
@@ -416,6 +438,7 @@ def callback(call):
         elif data.split('|')[0] == 'out_approve':
             user_chat_id = data.split('|')[1]
             dollars = float(data.split('|')[2])
+            amplitude_add(call.from_user, f'Approve output balance {dollars}$', user_chat_id)
             unique_number = data.split('|')[3]
             usr = Users.objects.get(tg_id=user_chat_id)
             usr.freeze_balance -= dollars
