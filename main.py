@@ -12,8 +12,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'USDT_Buy_Bot.settings')
 django.setup()
 from bot.models import Users, Card, AdminMessage
 
-bot = telebot.TeleBot('6544933471:AAGSYBK7nmuxWL8f42tpxHXV8z-lfhF2p5g')
-amplitude = Amplitude("e62466ab5c041effd0e32560107372a2")
+bot = telebot.TeleBot('BOT_TOKEN')
+amplitude = Amplitude("API-KEY")
 def amplitude_add(from_user, acttion, user_id=False):
     if not user_id:
         user_id = from_user.id
