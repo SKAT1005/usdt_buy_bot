@@ -1,0 +1,28 @@
+version: '3.6'
+
+services:
+  admin:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    environment:
+      - "RUN_ADMIN=true"
+    volumes:
+      - db:/app/data
+    ports:
+      - 8000:8000
+    restart: always
+  bot:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - db:/app/data
+    restart: always
+    depends_on:
+      - admin
+
+volumes:
+  db: {}

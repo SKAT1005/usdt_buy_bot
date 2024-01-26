@@ -12,7 +12,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'USDT_Buy_Bot.settings')
 django.setup()
 from bot.models import Users, Card, AdminMessage
 
-bot = telebot.TeleBot('BOT_TOKEN')
+bot = telebot.TeleBot(os.environ["BOT_API"])
 amplitude = Amplitude("API-KEY")
 def amplitude_add(from_user, acttion, user_id=False):
     if not user_id:
@@ -28,6 +28,7 @@ def amplitude_add(from_user, acttion, user_id=False):
             }
         )
     )
+
 def delite_history(user):
     messages_id = user.chat_history[:-1].split(',')
     for i in messages_id:
@@ -222,7 +223,6 @@ def start(message):
         user.save()
     except Exception:
         pass
-    bot.delete_message(chat_id=chat_id, message_id=message.id)
     check_user(chat_id, username)
 
 @bot.message_handler(commands=['balance'])
