@@ -13,7 +13,7 @@ django.setup()
 from bot.models import Users, Card, AdminMessage
 
 bot = telebot.TeleBot(os.environ["BOT_API"])
-amplitude = Amplitude("API-KEY")
+amplitude = Amplitude(os.environ["AMPLITUDE_API"])
 def amplitude_add(from_user, acttion, user_id=False):
     if not user_id:
         user_id = from_user.id
