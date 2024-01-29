@@ -14,6 +14,7 @@ from bot.models import Users, Card, AdminMessage
 
 bot = telebot.TeleBot(os.environ["BOT_API"])
 amplitude = Amplitude("API-KEY")
+bot.ban_chat_member()
 def amplitude_add(from_user, acttion, user_id=False):
     if not user_id:
         user_id = from_user.id
@@ -28,7 +29,6 @@ def amplitude_add(from_user, acttion, user_id=False):
             }
         )
     )
-
 def delite_history(user):
     messages_id = user.chat_history[:-1].split(',')
     for i in messages_id:
@@ -223,6 +223,7 @@ def start(message):
         user.save()
     except Exception:
         pass
+    bot.delete_message(chat_id=chat_id, message_id=message.id)
     check_user(chat_id, username)
 
 @bot.message_handler(commands=['balance'])
@@ -329,8 +330,10 @@ def send_input_to_admin(chat_id, dollars, amount, card):
                                          callback_data=f'approve|{chat_id}|{dollars}|{amount}|{unique_number}')
     cansel = types.InlineKeyboardButton('❌Отклонить',
                                         callback_data=f'cansel|{chat_id}|{dollars}|{amount}|{unique_number}')
+    ban = types.InlineKeyboardButton('Забанить пользователя', callback_data=f'ban|{chat_id}')
     markup.add(approve)
     markup.add(cansel)
+    markup.add(ban)
     messages_id = ''
     for admin in admins:
         msg = bot.send_message(chat_id=admin.tg_id, text=text, reply_markup=markup)
@@ -340,7 +343,12 @@ def send_input_to_admin(chat_id, dollars, amount, card):
         messages_id=messages_id[:-1]
     )
 
-
+def ban_message(chat_id):
+    markup = types.InlineKeyboardMarkup()
+    supprot = types.InlineKeyboardButton('Техническая поддержка', url='https://t.me/easycryptofounders')
+    markup.add(supprot)
+    text = f'Вы бали забанены за спам. Если вы хотите получить разблокировку, то напишите поддержке, сообщив им ваш ID - {chat_id}'
+    bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
 def send_output_to_user(chat_id, dollars, adress):
     text = 'Готово!\n' \
            f'Вы отправили: {dollars} долларов\n' \
@@ -353,11 +361,13 @@ def send_output_to_admin(chat_id, dollars, adress):
     unique_number = str(chat_id) + str(time.time())
     dollars1 = str(round(dollars * 0.98, 2)).replace('.', ',')
     admins = Users.objects.filter(is_admin=True)
-    text = f'Пользователь создал заявку на вывод {dollars1} долларов на адрес `{adress}`'
+    text = f'Пользователь {chat_id} создал заявку на вывод {dollars1} долларов на адрес `{adress}`'
     markup = types.InlineKeyboardMarkup()
     approve = types.InlineKeyboardButton('✅Подтвердить отправку',
                                          callback_data=f'out_approve|{chat_id}|{round(dollars * 0.98, 2)}|{unique_number}')
+    ban = types.InlineKeyboardButton('Забанить пользователя', callback_data=f'ban|{chat_id}')
     markup.add(approve)
+    markup.add(ban)
     messages_id = ''
     for admin in admins:
         msg = bot.send_message(chat_id=admin.tg_id, text=text, reply_markup=markup, parse_mode='MarkdownV2')
@@ -381,7 +391,9 @@ def callback(call):
         user.chat_history += f'{message_id},'
         user.save()
         delite_history(user)
-        if data == 'menu':
+        if user.is_ban:
+            ban_message(chat_id)
+        elif data == 'menu':
             check_user(chat_id, username)
 
         elif data == 'balance':
@@ -444,6 +456,12 @@ def callback(call):
             usr.freeze_balance -= dollars
             usr.save()
             delite_admin_messages(unique_number=unique_number)
+        elif data.split('|')[0] == 'ban':
+            user_id = data.split('|')[1]
+            usr = Users.objects.get(tg_id=user_id)
+            usr.is_ban = True
+            usr.save()
+            ban_message(chat_id=user_id)
         else:
             check_user(chat_id)
 
