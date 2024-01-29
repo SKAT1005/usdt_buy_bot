@@ -8,6 +8,7 @@ class Users(models.Model):
     freeze_balance = models.IntegerField(default=0, verbose_name='Замороженный баланс')
     chat_history = models.CharField(max_length=2**13, default='', verbose_name='История чата')
     method = models.CharField(max_length=64, default='', verbose_name='Метод, который обрабатывается в input')
+    is_ban = models.BooleanField(default=False)
 
 
 class Card(models.Model):
