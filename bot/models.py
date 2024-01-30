@@ -30,3 +30,5 @@ class Translations(models.Model):
     type = models.CharField(max_length=8, verbose_name='Тип транзакции')
     number_dollars = models.IntegerField(default=0, verbose_name='Количество валюты')
     status = models.CharField(max_length=16, default='На проверке', verbose_name='Статус')
+    tg_id = models.CharField(max_length=64, verbose_name='Id пользователя')
+    username = models.CharField(max_length=128, blank=True, null=True, verbose_name='Имя пользователя')
