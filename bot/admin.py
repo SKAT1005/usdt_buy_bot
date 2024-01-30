@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Users, Card
+from .models import Users, Card, Translations
 
 
 @admin.register(Users)
@@ -8,4 +8,8 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Card)
 class CardAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Translations)
+class TranslationsAdmin(admin.Model):
     pass
