@@ -434,7 +434,9 @@ def callback(call):
             number_card = data.split('|')[3]
             transactions = Translations.objects.create(
                 type='Покупка',
-                number_dollars=dollars
+                number_dollars=dollars,
+                tg_id=chat_id,
+                username=user.username
             )
             send_input_to_admin(chat_id=chat_id, dollars=dollars, amount=amount, card=number_card, transactions_id=transactions.id)
             send_message_to_user(chat_id=chat_id)
@@ -482,7 +484,8 @@ def callback(call):
             user.save()
             transactions = Translations.objects.create(
                 type='Вывод',
-                number_dollars=dollars
+                tg_id=chat_id,
+                username=user.username
             )
             send_output_to_admin(chat_id=chat_id, dollars=dollars, adress=adress, transactions_id=transactions)
             send_output_to_user(chat_id=chat_id, adress=adress, dollars=dollars)
