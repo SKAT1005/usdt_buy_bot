@@ -11,5 +11,5 @@ class CardAdmin(admin.ModelAdmin):
     pass
 
 @admin.register(Translations)
-class TranslationsAdmin(admin.Model):
+class TranslationsAdmin(admin.ModelAdmin):
     pass
