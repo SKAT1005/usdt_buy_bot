@@ -12,4 +12,4 @@ class CardAdmin(admin.ModelAdmin):
 
 @admin.register(Translations)
 class TranslationsAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['username', 'tg_id', 'number_dollars', 'status']
