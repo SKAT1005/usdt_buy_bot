@@ -13,8 +13,8 @@ django.setup()
 from bot.models import Users, Card, AdminMessage, Translations
 
 bot = telebot.TeleBot(os.environ["BOT_API"])
-amplitude = Amplitude(os.environ["AMPLITUDE_API"])
-bot.ban_chat_member()
+amplitude = Amplitude("API-KEY")
+
 
 def amplitude_add(from_user, acttion, user_id=False):
     if not user_id:
@@ -395,6 +395,9 @@ def callback(call):
     chat_id = call.message.chat.id
     user = Users.objects.get(tg_id=call.from_user.id)
     user.method = ''
+    if not user.username:
+        user.username = call.from_user.username
+        user.save()
     if call.message:
         data = call.data
         user.chat_history += f'{message_id},'
