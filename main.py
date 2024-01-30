@@ -10,7 +10,7 @@ from amplitude import Amplitude, BaseEvent
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'USDT_Buy_Bot.settings')
 django.setup()
-from bot.models import Users, Card, AdminMessage
+from bot.models import Users, Card, AdminMessage, Translations
 
 bot = telebot.TeleBot(os.environ["BOT_API"])
 amplitude = Amplitude(os.environ["AMPLITUDE_API"])
@@ -30,6 +30,8 @@ def amplitude_add(from_user, acttion, user_id=False):
             }
         )
     )
+
+
 def delite_history(user):
     messages_id = user.chat_history[:-1].split(',')
     for i in messages_id:
@@ -160,7 +162,8 @@ def buy_step_three(chat_id, amount, dollars):
     markup.add(send_money)
     markup.add(supprot)
     markup.add(cansel_deal)
-    msg = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup, parse_mode='MarkdownV2', disable_web_page_preview = True)
+    msg = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup, parse_mode='MarkdownV2',
+                           disable_web_page_preview=True)
     user = Users.objects.get(tg_id=chat_id)
     user.chat_history += f'{msg.id},'
     user.save()
@@ -207,7 +210,7 @@ def check_user(chat_id, username=''):
     try:
         user = Users.objects.get(tg_id=chat_id)
     except Exception:
-        user = Users.objects.create(tg_id=chat_id)
+        user = Users.objects.create(tg_id=chat_id, username=username)
         menu_first(chat_id)
     else:
         menu_two(chat_id, username)
@@ -227,12 +230,15 @@ def start(message):
     bot.delete_message(chat_id=chat_id, message_id=message.id)
     check_user(chat_id, username)
 
+
 @bot.message_handler(commands=['balance'])
 def balance_button(message):
     amplitude_add(message.from_user, 'balance')
     chat_id = message.chat.id
     user = Users.objects.get(tg_id=chat_id)
     balance(chat_id, user)
+
+
 @bot.message_handler(content_types='text')
 def input(message):
     chat_id = message.chat.id
@@ -322,16 +328,16 @@ def approve_or_cansel_input(chat_id, unique_number, dollars, amount, approved=Tr
         bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
 
 
-def send_input_to_admin(chat_id, dollars, amount, card):
+def send_input_to_admin(chat_id, dollars, amount, card, transactions_id):
     unique_number = str(chat_id) + str(time.time())
     admins = Users.objects.filter(is_admin=True)
     text = f'Пользователь отправил {amount}₽ для покупки {dollars} долларов на карту номер {card}'
     markup = types.InlineKeyboardMarkup()
     approve = types.InlineKeyboardButton('✅Одобрить',
-                                         callback_data=f'approve|{chat_id}|{dollars}|{amount}|{unique_number}')
+                                         callback_data=f'approve|{chat_id}|{dollars}|{amount}|{unique_number}|{transactions_id}')
     cansel = types.InlineKeyboardButton('❌Отклонить',
-                                        callback_data=f'cansel|{chat_id}|{dollars}|{amount}|{unique_number}')
-    ban = types.InlineKeyboardButton('Забанить пользователя', callback_data=f'ban|{chat_id}')
+                                        callback_data=f'cansel|{chat_id}|{dollars}|{amount}|{unique_number}|{transactions_id}')
+    ban = types.InlineKeyboardButton('Забанить пользователя', callback_data=f'ban|{chat_id}|{transactions_id}')
     markup.add(approve)
     markup.add(cansel)
     markup.add(ban)
@@ -344,12 +350,15 @@ def send_input_to_admin(chat_id, dollars, amount, card):
         messages_id=messages_id[:-1]
     )
 
+
 def ban_message(chat_id):
     markup = types.InlineKeyboardMarkup()
     supprot = types.InlineKeyboardButton('Техническая поддержка', url='https://t.me/easycryptofounders')
     markup.add(supprot)
     text = f'Вы бали забанены за спам. Если вы хотите получить разблокировку, то напишите поддержке, сообщив им ваш ID - {chat_id}'
     bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
+
+
 def send_output_to_user(chat_id, dollars, adress):
     text = 'Готово!\n' \
            f'Вы отправили: {dollars} долларов\n' \
@@ -358,15 +367,15 @@ def send_output_to_user(chat_id, dollars, adress):
     bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
 
 
-def send_output_to_admin(chat_id, dollars, adress):
+def send_output_to_admin(chat_id, dollars, adress, transactions_id):
     unique_number = str(chat_id) + str(time.time())
     dollars1 = str(round(dollars * 0.98, 2)).replace('.', ',')
     admins = Users.objects.filter(is_admin=True)
     text = f'Пользователь {chat_id} создал заявку на вывод {dollars1} долларов на адрес `{adress}`'
     markup = types.InlineKeyboardMarkup()
     approve = types.InlineKeyboardButton('✅Подтвердить отправку',
-                                         callback_data=f'out_approve|{chat_id}|{round(dollars * 0.98, 2)}|{unique_number}')
-    ban = types.InlineKeyboardButton('Забанить пользователя', callback_data=f'ban|{chat_id}')
+                                         callback_data=f'out_approve|{chat_id}|{round(dollars * 0.98, 2)}|{unique_number}|{transactions_id}')
+    ban = types.InlineKeyboardButton('Забанить пользователя', callback_data=f'ban|{chat_id}|{transactions_id}')
     markup.add(approve)
     markup.add(ban)
     messages_id = ''
@@ -381,7 +390,6 @@ def send_output_to_admin(chat_id, dollars, adress):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
-    print(call)
     username = call.from_user.first_name
     message_id = call.message.id
     chat_id = call.message.chat.id
@@ -404,65 +412,100 @@ def callback(call):
         elif data == 'buy':
             amplitude_add(call.from_user, 'buy_usd')
             buy_step_one(chat_id=chat_id)
+
         elif data.split('|')[0] == 'buy_dollar':
             dollars = float(data.split('|')[1])
             buy_step_two(chat_id=chat_id, dollars=dollars)
+
         elif data.split('|')[0] == 'start':
             amount = float(data.split('|')[1])
             dollars = float(data.split('|')[2])
             buy_step_three(chat_id=chat_id, dollars=dollars, amount=amount)
+
         elif data.split('|')[0] == 'send_money':
             amount = float(data.split('|')[1])
             dollars = float(data.split('|')[2])
             number_card = data.split('|')[3]
-            send_input_to_admin(chat_id=chat_id, dollars=dollars, amount=amount, card=number_card)
+            transactions = Translations.create(
+                type='Покупка',
+                number_dollars=dollars
+            )
+            send_input_to_admin(chat_id=chat_id, dollars=dollars, amount=amount, card=number_card, transactions_id=transactions.id)
             send_message_to_user(chat_id=chat_id)
+
         elif data.split('|')[0] == 'cansel':
             user_chat_id = data.split('|')[1]
             dollars = float(data.split('|')[2])
             amplitude_add(call.from_user, f'Cansel replenishment balance {dollars}$', user_chat_id)
             amount = float(data.split('|')[3])
             unique_number = data.split('|')[4]
+            transaction_id = data.split('|')[5]
+            transaction = Translations.objects.get(id=transaction_id)
+            transaction.status = 'Отказано'
+            transaction.save()
             approve_or_cansel_input(chat_id=user_chat_id, dollars=dollars, amount=amount, unique_number=unique_number,
                                     approved=False)
         elif data == 'output':
             amplitude_add(call.from_user, f'Output balance')
             output_step_one(chat_id=chat_id, user=user)
+
         elif data == 'output_all':
             output_step_two(chat_id=chat_id, user=user, dollars=user.balance)
+
         elif data.split('|')[0] == 'approve':
             user_chat_id = data.split('|')[1]
             dollars = float(data.split('|')[2])
             amplitude_add(call.from_user, f'Approve replenishment balance {dollars}$', user_chat_id)
             amount = float(data.split('|')[3])
             unique_number = data.split('|')[4]
+            transaction_id = data.split('|')[5]
+            transaction = Translations.objects.get(id=transaction_id)
+            transaction.status = 'Одобрено'
+            transaction.save()
             approve_or_cansel_input(chat_id=user_chat_id, dollars=dollars, amount=amount, unique_number=unique_number)
+
         elif data.split('|')[0] == 'edit_address':
             dollars = float(data.split('|')[1])
             output_step_two(chat_id=chat_id, user=user, dollars=dollars)
+
         elif data.split('|')[0] == 'approve_output':
             dollars = float(data.split('|')[1])
             adress = data.split('|')[2]
             user.balance -= dollars
             user.freeze_balance += dollars
             user.save()
-            send_output_to_admin(chat_id=chat_id, dollars=dollars, adress=adress)
+            transactions = Translations.create(
+                type='Вывод',
+                number_dollars=dollars
+            )
+            send_output_to_admin(chat_id=chat_id, dollars=dollars, adress=adress, transactions_id=transactions)
             send_output_to_user(chat_id=chat_id, adress=adress, dollars=dollars)
+
         elif data.split('|')[0] == 'out_approve':
             user_chat_id = data.split('|')[1]
             dollars = float(data.split('|')[2])
             amplitude_add(call.from_user, f'Approve output balance {dollars}$', user_chat_id)
             unique_number = data.split('|')[3]
+            transaction_id = data.split('|')[4]
+            transaction = Translations.objects.get(id=transaction_id)
+            transaction.status = 'Одобрено'
+            transaction.save()
             usr = Users.objects.get(tg_id=user_chat_id)
             usr.freeze_balance -= dollars
             usr.save()
             delite_admin_messages(unique_number=unique_number)
+
         elif data.split('|')[0] == 'ban':
+            transaction_id = data.split('|')[2]
+            transaction = Translations.objects.get(id=transaction_id)
+            transaction.status = 'Пользователя заблокировали'
+            transaction.save()
             user_id = data.split('|')[1]
             usr = Users.objects.get(tg_id=user_id)
             usr.is_ban = True
             usr.save()
             ban_message(chat_id=user_id)
+
         else:
             check_user(chat_id)
 
