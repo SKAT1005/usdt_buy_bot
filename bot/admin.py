@@ -4,7 +4,7 @@ from .models import Users, Card
 
 @admin.register(Users)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['id', 'tg_id']
+    list_display = ['id', 'tg_id', 'username', 'balance']
 
 @admin.register(Card)
 class CardAdmin(admin.ModelAdmin):
