@@ -224,7 +224,7 @@ def start(message):
     try:
         user = Users.objects.get(tg_id=chat_id)
         user.method = ''
-        user.save()с
+        user.save()
     except Exception:
         pass
     check_user(chat_id, username)
@@ -432,7 +432,7 @@ def callback(call):
             amount = float(data.split('|')[1])
             dollars = float(data.split('|')[2])
             number_card = data.split('|')[3]
-            transactions = Translations.create(
+            transactions = Translations.objects.create(
                 type='Покупка',
                 number_dollars=dollars
             )
@@ -480,7 +480,7 @@ def callback(call):
             user.balance -= dollars
             user.freeze_balance += dollars
             user.save()
-            transactions = Translations.create(
+            transactions = Translations.objects.create(
                 type='Вывод',
                 number_dollars=dollars
             )
