@@ -224,10 +224,9 @@ def start(message):
     try:
         user = Users.objects.get(tg_id=chat_id)
         user.method = ''
-        user.save()
+        user.save()с
     except Exception:
         pass
-    bot.delete_message(chat_id=chat_id, message_id=message.id)
     check_user(chat_id, username)
 
 
@@ -390,13 +389,17 @@ def send_output_to_admin(chat_id, dollars, adress, transactions_id):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
+    print(call)
     username = call.from_user.first_name
     message_id = call.message.id
     chat_id = call.message.chat.id
     user = Users.objects.get(tg_id=call.from_user.id)
     user.method = ''
     if not user.username:
-        user.username = call.from_user.username
+        try:
+            user.username = call.from_user.username
+        except Exception:
+            user.username = ' '
         user.save()
     if call.message:
         data = call.data
